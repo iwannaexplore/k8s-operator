@@ -39,7 +39,7 @@ import (
 	cachev1alpha1 "github.com/iwannaexplore/k8s-operator/api/v1alpha1"
 )
 
-const memcachedFinalizer = "cache.dodois.io/finalizer"
+const memcachedFinalizer = "cache.example.com/finalizer"
 
 // Definitions to manage status conditions
 const (
@@ -60,9 +60,9 @@ type MemcachedReconciler struct {
 // when the command <make manifests> is executed.
 // To know more about markers see: https://book.kubebuilder.io/reference/markers.html
 
-//+kubebuilder:rbac:groups=cache.dodois.io,resources=memcacheds,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=cache.dodois.io,resources=memcacheds/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=cache.dodois.io,resources=memcacheds/finalizers,verbs=update
+//+kubebuilder:rbac:groups=cache.example.com,resources=memcacheds,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=cache.example.com,resources=memcacheds/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=cache.example.com,resources=memcacheds/finalizers,verbs=update
 //+kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
@@ -373,7 +373,17 @@ func (r *MemcachedReconciler) deploymentForMemcached(
 						// Ensure restrictive context for the container
 						// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
 						SecurityContext: &corev1.SecurityContext{
-							RunAsNonRoot:             &[]bool{true}[0],
+							// WARNING: Ensure that the image used defines an UserID in the Dockerfile
+							// otherwise the Pod will not run and will fail with "container has runAsNonRoot and image has non-numeric user"".
+							// If you want your workloads admitted in namespaces enforced with the restricted mode in OpenShift/OKD vendors
+							// then, you MUST ensure that the Dockerfile defines a User ID OR you MUST leave the "RunAsNonRoot" and
+							// "RunAsUser" fields empty.
+							RunAsNonRoot: &[]bool{true}[0],
+							// The memcached image does not use a non-zero numeric user as the default user.
+							// Due to RunAsNonRoot field being set to true, we need to force the user in the
+							// container to a non-zero numeric user. We do this using the RunAsUser field.
+							// However, if you are looking to provide solution for K8s vendors like OpenShift
+							// be aware that you cannot run under its restricted-v2 SCC if you set this value.
 							RunAsUser:                &[]int64{1001}[0],
 							AllowPrivilegeEscalation: &[]bool{false}[0],
 							Capabilities: &corev1.Capabilities{
@@ -382,7 +392,11 @@ func (r *MemcachedReconciler) deploymentForMemcached(
 								},
 							},
 						},
-						Command: []string{"memcached", "-m=64", "modern", "-v"},
+						Ports: []corev1.ContainerPort{{
+							ContainerPort: memcached.Spec.ContainerPort,
+							Name:          "memcached",
+						}},
+						Command: []string{"memcached", "-m=64", "-o", "modern", "-v"},
 					}},
 				},
 			},
