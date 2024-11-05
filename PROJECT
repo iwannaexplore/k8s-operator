@@ -6,6 +6,16 @@ domain: dodois.io
 layout:
 - go.kubebuilder.io/v4
 plugins:
+  deploy-image.go.kubebuilder.io/v1-alpha:
+    resources:
+    - domain: dodois.io
+      group: cache
+      kind: Memcached
+      options:
+        containerCommand: memcached,-m=64,modern,-v
+        image: memcached:1.4.36-alpine
+        runAsUser: "1001"
+      version: v1alpha1
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
 projectName: memcached-operator
