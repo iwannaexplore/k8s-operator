@@ -1,32 +1,23 @@
----
+# permissions for end users to view memcacheds.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: manager-role
+  labels:
+    app.kubernetes.io/name: memcached-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: memcached-viewer-role
 rules:
 - apiGroups:
   - cache.dodois.io
   resources:
   - memcacheds
   verbs:
-  - create
-  - delete
   - get
   - list
-  - patch
-  - update
   - watch
-- apiGroups:
-  - cache.dodois.io
-  resources:
-  - memcacheds/finalizers
-  verbs:
-  - update
 - apiGroups:
   - cache.dodois.io
   resources:
   - memcacheds/status
   verbs:
   - get
-  - patch
-  - update
