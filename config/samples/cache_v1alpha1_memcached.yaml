@@ -3,5 +3,5 @@ kind: Memcached
 metadata:
   name: memcached-sample
 spec:
-  size: 2
+  size: 3
   containerPort: 11211
